@@ -108,4 +108,13 @@ Para cambiar la dirección que se muestra en la web:
 3. Guarda los cambios y recarga la web: el footer mostrará la nueva dirección automáticamente.
 ⚠️ La dirección NO se edita en el código: se cambia siempre en la compañía de Odoo.
 
+## Despliegue en Render
+
+- Servicio: shopservitx (https://shopservitx.onrender.com)
+- Repositorio: https://github.com/Techcom-Team/Techcom-Next
+- Auto-Deploy: activado (On commit). Cada git push a la rama configurada despliega automaticamente.
+- Build Command: npm ci && npm run build
+- Start Command: npm run start
+- Variables de entorno (solo en Render, nunca en el repo): ODOO_URL, ODOO_DB, ODOO_USER, ODOO_API_KEY
+
 **© 2026 ServiTx · Telecomunicaciones · Informática · Electrónica**
