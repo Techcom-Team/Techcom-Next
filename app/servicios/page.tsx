@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { addToCart } from '@/lib/cart';
+import { getCached, setCache } from '@/lib/clientCache';
 
 type S = { id: number; name: string; list_price: number; description: string; image: string; variantId: number };
 
@@ -42,11 +43,48 @@ function ServiceCard({ s }: { s: S }) {
   );
 }
 
+const ServiceSkeleton = () => (
+  <div className="service-card skeleton">
+    <div className="card-img" style={{ background: '#e2e8f0' }}></div>
+    <div className="card-body">
+      <div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '10px', width: '80%' }}></div>
+      <div style={{ height: '24px', background: '#e2e8f0', borderRadius: '4px', width: '40%' }}></div>
+    </div>
+  </div>
+);
+
 export default function Servicios() {
   const [services, setServices] = useState<S[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const fetchServices = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const cached = getCached('services');
+      if (cached && (Date.now() - cached.time < 30000)) {
+        setServices(cached.data);
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/services');
+      const data = await res.json();
+      setServices(data.services || []);
+      setCache('services', data.services || []);
+    } catch {
+      setError(true);
+      setServices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/services').then((r) => r.json()).then((d) => setServices(d.services || [])).catch(() => setServices([]));
+    fetchServices();
   }, []);
+
   return (
     <main>
       <section className="services-hero">
@@ -54,8 +92,21 @@ export default function Servicios() {
       </section>
       <div className="container" style={{ paddingBottom: '3rem' }}>
         <div className="services-list">
-          {services.map((s) => <ServiceCard key={s.id} s={s} />)}
-          {services.length === 0 && <p className="empty-msg">Cargando servicios...</p>}
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => <ServiceSkeleton key={i} />)
+          ) : error ? (
+            <div className="error-message">
+              <p>Ocurrió un error al cargar los servicios. Intenta de nuevo.</p>
+              <button className="btn-primary" onClick={fetchServices}>Reintentar</button>
+            </div>
+          ) : services.length === 0 ? (
+            <div className="empty-message">
+              <div className="empty-icon"><WrenchIcon /></div>
+              <p>No hay servicios disponibles en este momento. Vuelve más tarde o escríbenos por WhatsApp y te atendemos directamente.</p>
+            </div>
+          ) : (
+            services.map((s) => <ServiceCard key={s.id} s={s} />)
+          )}
         </div>
       </div>
     </main>

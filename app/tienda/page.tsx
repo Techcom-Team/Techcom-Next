@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { addToCart } from '@/lib/cart';
+import { getCached, setCache } from '@/lib/clientCache';
 
 type Product = { id: number; name: string; list_price: number; image: string; variantId: number };
 type Category = { id: number; name: string };
@@ -115,20 +116,38 @@ function TiendaContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [catsRes, filtersRes, priceRes] = await Promise.all([
-          fetch('/api/categories'),
-          fetch('/api/filters'),
-          fetch('/api/products?max_price_only=true')
-        ]);
-        
-        const catsData = await catsRes.json();
-        const filtersData = await filtersRes.json();
-        const priceData = await priceRes.json();
+        const catKey = 'categories';
+        const filterKey = 'filters';
+        const priceKey = 'products_max_price';
 
-        setCategories(catsData.categories || []);
-        setAttributes(filtersData.attributes || []);
-        setMaxPriceLimit(priceData.maxPrice || 5000);
-        setMaxPrice(priceData.maxPrice || 5000);
+        const catCache = getCached<Category[]>(catKey);
+        const filterCache = getCached<Attribute[]>(filterKey);
+        const priceCache = getCached<number>(priceKey);
+
+        const now = Date.now();
+
+        let catsData = catCache && (now - catCache.time < 30000) ? { categories: catCache.data } : null;
+        let filtersData = filterCache && (now - filterCache.time < 30000) ? { attributes: filterCache.data } : null;
+        let priceData = priceCache && (now - priceCache.time < 30000) ? { maxPrice: priceCache.data } : null;
+
+        const promises = [];
+        if (!catsData) promises.push(fetch('/api/categories').then(r => r.json()).then(d => { setCache(catKey, d.categories || []); return { type: 'cats', data: d }; }));
+        if (!filtersData) promises.push(fetch('/api/filters').then(r => r.json()).then(d => { setCache(filterKey, d.attributes || []); return { type: 'filters', data: d }; }));
+        if (!priceData) promises.push(fetch('/api/products?max_price_only=true').then(r => r.json()).then(d => { setCache(priceKey, d.maxPrice || 5000); return { type: 'price', data: d }; }));
+
+        const results = await Promise.all(promises);
+        results.forEach(res => {
+          if (res.type === 'cats') catsData = res.data;
+          if (res.type === 'filters') filtersData = res.data;
+          if (res.type === 'price') priceData = res.data;
+        });
+
+        if (catsData) setCategories(catsData.categories || []);
+        if (filtersData) setAttributes(filtersData.attributes || []);
+        if (priceData) {
+          setMaxPriceLimit(priceData.maxPrice || 5000);
+          setMaxPrice(priceData.maxPrice || 5000);
+        }
       } catch (err) {
         console.error("Error carga inicial", err);
       }
@@ -158,11 +177,19 @@ function TiendaContent() {
         params.set('max', String(maxPrice));
         params.set('sort', sortBy);
         
+        const cacheKey = `products?${params.toString()}`;
+        const cached = getCached<Product[]>(cacheKey);
+        if (cached && (Date.now() - cached.time < 30000)) {
+          setProducts(cached.data);
+          setLoading(false);
+          return;
+        }
+
         const res = await fetch(`/api/products?${params.toString()}`);
         const data = await res.json();
-        
-        // Aseguramos que siempre sea un array
-        setProducts(Array.isArray(data.products) ? data.products : []);
+        const prods = Array.isArray(data.products) ? data.products : [];
+        setProducts(prods);
+        setCache(cacheKey, prods);
       } catch (err) {
         console.error("Error cargando productos", err);
         setProducts([]);

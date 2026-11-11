@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       } catch (e) { allowedTemplateIds = null; }
     }
 
-    const domain: any[] = [['type', '!=', 'service']];
+    const domain: any[] = [['type', '!=', 'service'], ['website_published', '=', true]];
     if (allowedTemplateIds) domain.push(['product_tmpl_id', 'in', allowedTemplateIds]);
     if (min) domain.push(['list_price', '>=', parseFloat(min)]);
     if (max) domain.push(['list_price', '<=', parseFloat(max)]);
