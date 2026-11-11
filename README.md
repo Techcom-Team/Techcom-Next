@@ -110,7 +110,7 @@ Para cambiar la dirección que se muestra en la web:
 
 ## Despliegue en Render
 
-- Servicio: shopservitx (https://shopservitx.onrender.com)
+- Servicio: shopservitx (https://shopservitx.onrender.com), (https://shop.servitx.cu)
 - Repositorio: https://github.com/Techcom-Team/Techcom-Next
 - Auto-Deploy: activado (On commit). Cada git push a la rama configurada despliega automaticamente.
 - Build Command: npm ci && npm run build
