@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getCart, changeQty, removeLine, clearCart, CartLine } from '@/lib/cart';
+import { getCart, updateQty, removeFromCart, clearCart, CartItem } from '@/lib/cart';
 
 export default function CarritoPage() {
-  const [lines, setLines] = useState<CartLine[]>([]);
+  const [lines, setLines] = useState<CartItem[]>([]);
   const [sel, setSel] = useState<Set<string>>(new Set());
 
   useEffect(() => { setLines(getCart()); }, []);
@@ -21,22 +21,22 @@ export default function CarritoPage() {
             {lines.length === 0 ? (
               <p className="empty-msg">Tu carrito está vacío. <Link href="/tienda" style={{ color: 'var(--primary)' }}>Ir a la tienda</Link></p>
             ) : lines.map((l) => (
-              <div className="cart-item" key={l.variant}>
-                <input type="checkbox" checked={sel.has(l.variant)} onChange={() => toggle(l.variant)} />
-                {l.img ? <img src={l.img} alt={l.name} /> : <span className="no-img-sm">📦</span>}
+              <div className="cart-item" key={l.id}>
+                <input type="checkbox" checked={sel.has(String(l.id))} onChange={() => toggle(String(l.id))} />
+                {l.image ? <img src={l.image} alt={l.name} /> : <span className="no-img-sm">📦</span>}
                 <div className="item-info"><h4>{l.name}</h4><span className="item-price">${l.price.toFixed(2)}</span></div>
                 <div className="item-controls">
-                  <button onClick={() => { changeQty(l.variant, -1); refresh(); }}>−</button>
+                  <button onClick={() => { updateQty(l.id, -1); refresh(); }}>−</button>
                   <span>{l.qty}</span>
-                  <button onClick={() => { changeQty(l.variant, 1); refresh(); }}>+</button>
+                  <button onClick={() => { updateQty(l.id, 1); refresh(); }}>+</button>
                 </div>
-                <button className="delete-item" onClick={() => { removeLine(l.variant); refresh(); }}>✕</button>
+                <button className="delete-item" onClick={() => { removeFromCart(l.id); refresh(); }}>✕</button>
               </div>
             ))}
             {lines.length > 0 && (
               <div className="cart-actions" style={{ marginTop: '1rem' }}>
                 <button className="btn-danger" disabled={sel.size === 0}
-                  onClick={() => { sel.forEach((v) => removeLine(v)); setSel(new Set()); refresh(); }}>
+                  onClick={() => { sel.forEach((v) => removeFromCart(Number(v))); setSel(new Set()); refresh(); }}>
                   Borrar seleccionados ({sel.size})
                 </button>
                 <button className="btn-outline" onClick={() => { clearCart(); setSel(new Set()); refresh(); }}>Vaciar carrito</button>
